@@ -1,0 +1,17 @@
+﻿# Core data manipulation
+pandas>=2.2.0
+numpy>=1.26.0
+
+# Configuration & data loading
+pyyaml>=6.0.1
+requests>=2.31.0
+tqdm>=4.66.0
+
+# Testing & quality validation
+pytest>=8.0.0
+
+# Interactive analysis & visualization
+jupyterlab>=4.1.0
+ipykernel>=6.29.0
+matplotlib>=3.8.0
+seaborn>=0.13.0

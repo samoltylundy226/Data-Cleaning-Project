@@ -1,0 +1,14 @@
+﻿project:
+  name: "chicago-food-inspections-data-quality-pipeline"
+  version: "0.1.0"
+  description: "End-to-End Data Cleaning & Data Quality Pipeline for Chicago Food Inspections"
+
+data:
+  raw_path: "data/raw/food_inspections_raw.csv"
+  interim_path: "data/interim/food_inspections_interim.csv"
+  processed_path: "data/processed/food_inspections_cleaned.csv"
+  source_url: "https://data.cityofchicago.org/api/views/4ijn-s7e5/rows.csv?accessType=DOWNLOAD"
+
+pipeline:
+  random_seed: 42
+  sample_size: null  # Set integer (e.g. 50000) for faster testing during development, or null for all records
