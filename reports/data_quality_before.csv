@@ -1,0 +1,18 @@
+column_name,data_type,total_rows,missing_count,missing_pct,unique_count,unique_pct,num_zeros,num_whitespace_only,min_or_shortest,max_or_longest,suspected_data_quality_issues
+Inspection ID,int64,315963,0,0.0,315963,100.0,0,0,44247,2643194,None identified
+DBA Name,str,315963,0,0.0,35163,11.13,0,0,1 chars,79 chars,Whitespace padding (3 rows); Inconsistent casing (393 duplicate variations)
+AKA Name,str,315963,2424,0.77,33450,10.59,0,0,2 chars,79 chars,Missing values (0.77%); Whitespace padding (3 rows); Inconsistent casing (383 duplicate variations)
+License #,float64,315963,19,0.01,49130,15.55,833,0,0.0,9999999.0,Missing values (0.01%); Contains zero values (833 rows); Stored as float due to NaNs; zero values present
+Facility Type,str,315963,5347,1.69,527,0.17,0,0,3 chars,47 chars,Missing values (1.69%); Inconsistent casing (54 duplicate variations)
+Risk,str,315963,87,0.03,4,0.0,0,0,3 chars,15 chars,Missing values (0.03%); Non-standard risk category 'All' (83 rows)
+Address,str,315963,0,0.0,33287,10.54,0,3,1 chars,52 chars,"Whitespace padding (246,705 rows); Inconsistent casing (12949 duplicate variations)"
+City,str,315963,181,0.06,94,0.03,0,0,2 chars,20 chars,Missing values (0.06%); Inconsistent casing (5 duplicate variations); Non-standard or suburban cities (396 rows)
+State,str,315963,75,0.02,7,0.0,0,0,2 chars,2 chars,Missing values (0.02%)
+Zip,float64,315963,42,0.01,139,0.04,0,0,10014.0,91706.0,Missing values (0.01%); Stored as float; contains non-Chicago / out-of-state zips
+Inspection Date,str,315963,0,0.0,4213,1.33,0,0,10 chars,10 chars,Stored as string instead of datetime
+Inspection Type,str,315963,1,0.0,110,0.03,0,0,3 chars,41 chars,Missing values (0.00%); Inconsistent casing (12 duplicate variations)
+Results,str,315963,0,0.0,7,0.0,0,0,4 chars,20 chars,None identified
+Violations,str,315963,89080,28.19,225170,71.26,0,0,30 chars,12706 chars,"High missingness (28.2%); Whitespace padding (31,490 rows); Inconsistent casing (332 duplicate variations); Unstructured free-text log with multiple concatenated violations"
+Latitude,float64,315963,1051,0.33,18952,6.0,0,0,41.64467013219805,42.02106424782547,"Missing values (0.33%); Missing geospatial coordinates (1,051 rows)"
+Longitude,float64,315963,1051,0.33,18952,6.0,0,0,-87.90687413400109,-87.5250941359867,"Missing values (0.33%); Missing geospatial coordinates (1,051 rows)"
+Location,str,315963,1051,0.33,18952,6.0,0,0,34 chars,40 chars,Missing values (0.33%)
