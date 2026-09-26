@@ -25,7 +25,7 @@ This repository demonstrates professional data engineering, data cleaning, and d
 
 ## 📊 Baseline Data Quality Findings (Day 2 Pre-Cleaning Audit)
 
-Before writing any transformation logic, we established a quantitative data-quality baseline exported to [`reports/data_quality_before.csv`](reports/data_quality_before.csv).
+Before writing transformation logic, we established a quantitative data-quality baseline exported to [`reports/data_quality_before.csv`](reports/data_quality_before.csv).
 
 | Metric | Baseline Value | Key Diagnostic Takeaway |
 | :--- | :--- | :--- |
@@ -35,18 +35,31 @@ Before writing any transformation logic, we established a quantitative data-qual
 | **Duplicate Inspection IDs** | 0 | `Inspection ID` serves as a reliable surrogate primary key. |
 | **Total Missing Cells** | 100,409 (1.87%) | Concentrated heavily in `Violations` and `Facility Type`. |
 
-### Key Anomaly Discoveries:
-1. **Unstructured Violation Strings (`Violations`):** 89,080 rows (28.19%) are null (ordinarily indicating a clean inspection with no citations), while 225,170 rows contain multi-part concatenated free text requiring a dedicated parsing engine.
-2. **Whitespace Padding:** Over 246,705 `Address` records and 31,490 `Violations` strings have leading/trailing whitespace.
-3. **Casing & Categorical Explosion:**
-   * `Facility Type` exhibits 527 raw categories, collapsing to 473 when stripped and lowercased.
-   * `City` contains 94 distinct entries including typographical errors (`CCHICAGO`, `CHICAGOCHICAGO`, `CHICAGOO`, `CHicago`, `CHICAGO.`) and suburban jurisdictions.
-4. **Data Type & Schema Flaws:**
-   * `License #` and `Zip` are loaded as floating-point numbers due to missing values (`NaN`).
-   * 833 records possess `License # == 0`.
-   * Out-of-state / extreme ZIP codes detected (ranging from `10014.0` in NY to `91706.0` in CA).
-   * `Inspection Date` is stored as an unparsed `MM/DD/YYYY` string.
-5. **Non-Standard Classifications:** `Risk` contains 83 instances of `"All"`, deviating from standard Chicago food safety risk tiers (*Risk 1 High*, *Risk 2 Medium*, *Risk 3 Low*).
+---
+
+## 🧹 Core Data Cleaning Engine (Day 3 Transformations)
+
+Implemented in [`src/cleaning.py`](src/cleaning.py), the cleaning engine enforces strict domain rules without destroying data integrity:
+
+* **Zero Rows Blindly Deleted:** All **315,963 records** are retained; missing values are imputed through domain-appropriate policies.
+* **Column Name Normalization:** Raw headers converted to standardized snake_case identifiers.
+* **Whitespace & Casing Normalization:** Over **246,705 addresses** and text fields stripped of padding and standardized to uppercase.
+* **Missing Value Imputations:**
+  * `aka_name`: **2,424 records** filled using the legal `dba_name`.
+  * `facility_type`: **5,347 records** imputed with `'UNKNOWN'`.
+  * `violations`: **89,080 records** (clean inspections with no citations) imputed with `'NO VIOLATIONS CITED'`.
+  * `risk`: **87 records** imputed with `'NOT SPECIFIED'`.
+* **Geographic & Regex Standardization:**
+  * **315,683 records** unified to `'CHICAGO'`, correcting typographical variations (`CCHICAGO`, `CHICAGOCHICAGO`, `CHICAGOO`, etc.) while preserving distinct municipalities (`CHICAGO HEIGHTS`, `EVANSTON`).
+  * **315,921 ZIP codes** converted from float (`60601.0`) to standard 5-digit zero-padded strings (`60601`).
+  * Spatial coordinates validated against the Chicago bounding box (lat `[41.60, 42.10]`, lon `[-87.95, -87.50]`).
+* **Category Normalization:**
+  * `Facility Type`: Consolidated from **527 raw categories** to **293 standard categories** using regex grouping.
+  * `Risk`: Standardized non-standard `'All'` entries to `'Risk 1 (High)'`.
+* **Datatypes & Temporal Features:**
+  * `inspection_date`: Parsed to `datetime64[ns]` across all 315,963 records.
+  * Derived features added: `inspection_year`, `inspection_month`, `inspection_day_of_week`.
+  * Output exported to: `data/interim/food_inspections_interim.csv` (336.90 MB, 20 columns).
 
 ---
 
@@ -68,15 +81,17 @@ chicago-food-inspections-data-quality-pipeline/
 │
 ├── data/
 │   ├── raw/                  # Immutable original dataset (git-ignored)
-│   ├── interim/              # Intermediate transformed stages
+│   ├── interim/              # Intermediate cleaned data (git-ignored)
 │   └── processed/            # Validated, analysis-ready clean datasets
 │
 ├── src/                      # Modular production source code
 │   ├── __init__.py
-│   └── profiling.py          # Automated baseline data profiling module
+│   ├── profiling.py          # Automated baseline data profiling module
+│   └── cleaning.py           # Core data cleaning & standardization engine
 │
 ├── tests/                    # Automated unit and quality tests
-│   └── test_profiling.py
+│   ├── test_profiling.py     # Unit tests for profiling module
+│   └── test_cleaning.py      # Unit tests for cleaning transformations
 │
 ├── reports/
 │   ├── figures/              # Generated quality audit charts and summaries
@@ -112,12 +127,15 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4. Run baseline profiling & tests
+### 4. Execute pipeline modules & test suite
 ```bash
-# Run automated data profiling baseline:
+# Run baseline profiling:
 python src/profiling.py
 
-# Run unit tests:
+# Execute core cleaning pipeline (generates data/interim/):
+python src/cleaning.py
+
+# Run test suite:
 pytest
 ```
 
@@ -127,8 +145,8 @@ pytest
 
 - [x] **Day 1: Project Setup, Architecture & Data Verification**
 - [x] **Day 2: Exploratory Data Analysis & Data Quality Profiling**
-- [ ] **Day 3: Text Parsing & Violation Extraction Engine**
-- [ ] **Day 4: Categorical & Geographic Standardization**
+- [x] **Day 3: Core Data Cleaning & Standardization Engine**
+- [ ] **Day 4: Text Parsing & Violation Extraction Engine**
 - [ ] **Day 5: Missing Data, Outliers & Anomaly Detection**
 - [ ] **Day 6: Automated Data Validation & Test Suite**
 - [ ] **Day 7: Pipeline Orchestration, Documentation & Portfolio Showcase**
