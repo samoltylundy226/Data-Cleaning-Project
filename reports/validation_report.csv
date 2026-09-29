@@ -1,0 +1,10 @@
+check_id,category,rule_description,severity,status,failing_records_count,failing_records_pct,details,suggested_action
+VAL-001,Schema,Presence of required canonical columns,CRITICAL,PASS,0,0.0,All 16 required columns present.,None.
+VAL-002,Integrity,Primary key (inspection_id) uniqueness and validity,CRITICAL,PASS,0,0.0,"inspection_id is unique, non-null, and positive.",None.
+VAL-003,Completeness,Mandatory operational fields must not be null or blank,CRITICAL,WARNING,3,0.0009,Blank entries detected: {'address': 3},Impute or flag blank addresses/names before analytics.
+VAL-004,Temporal,"Inspection dates must be valid, within 2010 to present",CRITICAL,PASS,0,0.0,Dates span 2010-01-04 to 2026-09-23 with zero violations.,None.
+VAL-005,Geospatial,"Coordinates must fall within Chicago bounding box [41.6-42.1, -87.95--87.50]",WARNING,WARNING,0,0.0,"0 coordinates out of bounds; 1,051 coordinates missing/null.",Geocode missing or out-of-bounds coordinates from Address.
+VAL-006,Geospatial,ZIP codes must be 5-digit strings matching Illinois/Chicago patterns,WARNING,WARNING,0,0.0,"0 malformed ZIP strings; 2,334 suburban/regional non-606xx ZIPs.",None.
+VAL-007,Categorical,Results must strictly belong to official 7 Chicago outcome types,CRITICAL,PASS,0,0.0,"100% compliant with official categories: ['BUSINESS NOT LOCATED', 'FAIL', 'NO ENTRY', 'NOT READY', 'OUT OF BUSINESS', 'PASS', 'PASS W/ CONDITIONS']",None.
+VAL-008,Categorical,"Risk tiers must conform to official Chicago Risk 1, 2, 3 classifications",CRITICAL,PASS,0,0.0,"100% compliant with official risk categories: ['NOT SPECIFIED', 'Risk 1 (High)', 'Risk 2 (Medium)', 'Risk 3 (Low)']",None.
+VAL-009,Business Logic,Inspections resulting in FAIL should document violation citations,WARNING,WARNING,3648,1.1546,"3,648 records marked FAIL but cite zero violations (likely administrative/access failures).","Audit administrative failure codes (e.g. No Entry, Not Ready) recorded under Fail."
