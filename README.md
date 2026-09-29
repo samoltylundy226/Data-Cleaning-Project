@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-An end-to-end, production-style data cleaning, standardization, and data quality assurance pipeline built on the City of Chicago Food Inspections dataset.
+An end-to-end, production-style data cleaning, standardization, data validation, and data quality assurance pipeline built on the City of Chicago Food Inspections dataset.
 
 ---
 
@@ -63,6 +63,34 @@ Implemented in [`src/cleaning.py`](src/cleaning.py), the cleaning engine enforce
 
 ---
 
+## 🛡️ Data Validation & Anomaly Detection Layer (Day 4)
+
+Implemented in [`src/validation.py`](src/validation.py) and [`src/anomaly_detection.py`](src/anomaly_detection.py), this layer executes automated business-rule validations and statistical outlier profiling.
+
+### 1. Automated Validation Scorecard ([`reports/validation_report.csv`](reports/validation_report.csv))
+* **Evaluation Result:** **5 PASS | 4 WARNING | 0 FAIL** across all 9 automated integrity checks.
+* **Primary Key & Schema:** `inspection_id` is 100% unique, positive, and non-null; all canonical schema features verified.
+* **Temporal Integrity:** 100% of inspection dates fall strictly within the valid operational window (`2010-01-04` to `2026-09-23`) with zero future or corrupted timestamps.
+* **Category Compliance:** 100% compliance with official Chicago `Results` (7 discrete categories) and `Risk` tiers.
+* **Monitored Warnings:**
+  * `VAL-003`: 3 records flagged with empty address strings (`'   '`).
+  * `VAL-005`: 1,051 records lack geographic coordinates (retained for inspection record integrity).
+  * `VAL-006`: 2,334 suburban/regional non-606xx ZIP codes (valid border-overlap food establishments).
+  * `VAL-009`: 3,648 inspections resulted in `FAIL` without text violations (administrative/access closures).
+
+### 2. Anomaly Taxonomy & Outlier Principles ([`reports/anomaly_report.csv`](reports/anomaly_report.csv))
+In professional data science, **statistical outliers must not be blindly deleted**:
+
+| Anomaly Type | Classification | Detection Method | Policy & Rationale |
+| :--- | :--- | :--- | :--- |
+| **Inspection Frequency per License** | Statistical Outlier | IQR Upper Fence (21 visits) & 99th Pct | **RETAIN:** High-frequency licenses (max 198 visits) represent long-lived airport terminals (O'Hare) and stadiums. Deleting them would erase the city's largest dining hubs. |
+| **Citation Spikes per Inspection** | Statistical Outlier | IQR Upper Fence (12.5 citations) | **RETAIN:** Single inspections with 15–40 citations represent critical unsanitary emergencies, providing the primary signal for food-safety risk modeling. |
+| **Distance from City Hall (> 25 km)** | Legitimate Unusual Observation | Haversine Distance Threshold | **RETAIN:** Legitimate peripheral jurisdictions like O'Hare Airport (26 km NW) and far southern wards (Hegewisch). |
+| **Weekend Inspections (Sat/Sun)** | Legitimate Unusual Observation | Day-of-Week Profiling (136 records) | **RETAIN:** Off-hour inspections for special summer food festivals (Taste of Chicago) and urgent complaint investigations. |
+| **Blank Address Strings (`'   '`)** | Data-Entry Error | Whitespace Strip & Length Check (3 records) | **IMPUTE:** Source clerical error; repair with `'ADDRESS UNKNOWN'` to maintain record integrity. |
+
+---
+
 ## 🗂️ Project Structure
 
 ```text
@@ -87,15 +115,21 @@ chicago-food-inspections-data-quality-pipeline/
 ├── src/                      # Modular production source code
 │   ├── __init__.py
 │   ├── profiling.py          # Automated baseline data profiling module
-│   └── cleaning.py           # Core data cleaning & standardization engine
+│   ├── cleaning.py           # Core data cleaning & standardization engine
+│   ├── validation.py         # Automated data validation & integrity suite
+│   └── anomaly_detection.py  # Statistical outlier & anomaly profiling engine
 │
-├── tests/                    # Automated unit and quality tests
+├── tests/                    # Automated test suite (19 passing unit tests)
 │   ├── test_profiling.py     # Unit tests for profiling module
-│   └── test_cleaning.py      # Unit tests for cleaning transformations
+│   ├── test_cleaning.py      # Unit tests for cleaning transformations
+│   ├── test_validation.py    # Unit tests for validation rules
+│   └── test_anomaly_detection.py # Unit tests for anomaly & outlier methods
 │
 ├── reports/
 │   ├── figures/              # Generated quality audit charts and summaries
-│   └── data_quality_before.csv # Automated Day 2 baseline audit report
+│   ├── data_quality_before.csv # Automated Day 2 baseline audit report
+│   ├── validation_report.csv   # Automated Day 4 validation scorecard
+│   └── anomaly_report.csv      # Automated Day 4 anomaly registry
 │
 └── notebooks/
     └── 01_exploration.ipynb  # Exploratory Data Analysis & quality audits
@@ -129,13 +163,17 @@ pip install -r requirements.txt
 
 ### 4. Execute pipeline modules & test suite
 ```bash
-# Run baseline profiling:
+# 1. Run baseline profiling:
 python src/profiling.py
 
-# Execute core cleaning pipeline (generates data/interim/):
+# 2. Execute core cleaning pipeline:
 python src/cleaning.py
 
-# Run test suite:
+# 3. Run validation and anomaly detection:
+python src/validation.py
+python src/anomaly_detection.py
+
+# 4. Run full unit test suite (19 tests):
 pytest
 ```
 
@@ -146,7 +184,7 @@ pytest
 - [x] **Day 1: Project Setup, Architecture & Data Verification**
 - [x] **Day 2: Exploratory Data Analysis & Data Quality Profiling**
 - [x] **Day 3: Core Data Cleaning & Standardization Engine**
-- [ ] **Day 4: Text Parsing & Violation Extraction Engine**
+- [x] **Day 4: Automated Data Validation & Anomaly Detection Layer**
 - [ ] **Day 5: Missing Data, Outliers & Anomaly Detection**
 - [ ] **Day 6: Automated Data Validation & Test Suite**
 - [ ] **Day 7: Pipeline Orchestration, Documentation & Portfolio Showcase**
