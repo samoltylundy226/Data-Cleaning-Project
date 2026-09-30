@@ -1,4 +1,4 @@
-﻿# 🧼 Chicago Food Inspections — End-to-End Data Cleaning & Data Quality Pipeline
+# 🧼 Chicago Food Inspections — End-to-End Data Cleaning & Data Quality Pipeline
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -91,6 +91,42 @@ In professional data science, **statistical outliers must not be blindly deleted
 
 ---
 
+## ⚙️ End-to-End Pipeline Orchestration (Day 5)
+
+Implemented in [`src/pipeline.py`](src/pipeline.py) and [`src/ingestion.py`](src/ingestion.py), the master pipeline orchestrator automates the complete data engineering lifecycle into a reproducible, single-command workflow:
+
+```text
+RAW DATA  ──►  INGESTION  ──►  PROFILING  ──►  CLEANING  ──►  ANOMALY DETECTION  ──►  VALIDATION  ──►  PROCESSED DATA  ──►  QUALITY REPORT
+```
+
+### 1. Architectural Stages
+1. **Ingestion & Validation (`src/ingestion.py`):** Loads centralized configuration (`config/config.yaml`), verifies raw file checksum/existence, and streams downloads on demand without mutating source data.
+2. **Pre-Cleaning Profiling (`src/profiling.py`):** Computes pre-transformation baseline statistics and exports [`reports/data_quality_before.csv`](reports/data_quality_before.csv).
+3. **Data Cleaning & Standardization (`src/cleaning.py`):** Executes all casing, whitespace, ZIP code, facility type, temporal, and missing-value transformations; writes the interim dataset to `data/interim/food_inspections_interim.csv`.
+4. **Anomaly Detection & Outlier Flagging (`src/anomaly_detection.py`):** Computes statistical bounds (IQR fences, Haversine spatial radii, calendar distributions) and exports [`reports/anomaly_report.csv`](reports/anomaly_report.csv).
+5. **Quality Gating & Validation (`src/validation.py`):** Asserts 9 business and schema rules. If any `CRITICAL` rule fails, execution halts immediately; non-critical findings are recorded in [`reports/validation_report.csv`](reports/validation_report.csv).
+6. **Processed Data Export:** Exports the validated, analysis-ready dataset to `data/processed/food_inspections_cleaned.csv` (336.90 MB, 315,963 rows, 20 columns).
+7. **Post-Cleaning Quality Reporting:** Generates [`reports/data_quality_after.csv`](reports/data_quality_after.csv) providing a comparative post-cleaning audit.
+8. **Structured Dual-Output Logging:** Records all pipeline events with millisecond timestamps to console and `pipeline.log`.
+
+### 2. Before vs. After Data Quality Audit
+
+| Metric / Dimension | Raw Baseline (Day 2) | Processed & Cleaned (Day 5) | Net Impact / Improvement |
+| :--- | :--- | :--- | :--- |
+| **Total Rows** | 315,963 | 315,963 | **100% data retention (0 rows blindly deleted)** |
+| **Total Features** | 17 columns | 20 columns | +3 engineered features (`year`, `month`, `day_of_week`) |
+| **Primary Key Nulls / Dupes** | 0 / 0 | 0 / 0 | 100% unique surrogate ID (`inspection_id`) |
+| **Missing `aka_name`** | 2,424 (0.77%) | 0 (0.0%) | 100% resolved via fallback to legal `dba_name` |
+| **Missing `violations`** | 89,080 (28.19%) | 0 (0.0%) | Imputed with standard `"NO VIOLATIONS CITED"` |
+| **Missing `facility_type`** | 5,347 (1.69%) | 0 (0.0%) | Imputed with standard `"UNKNOWN"` |
+| **Facility Type Cardinality** | 527 messy categories | 293 consolidated categories | -234 redundant casing & spelling variants |
+| **Inspection Date Type** | `object` (string) | `datetime64[ns]` | 100% parsed; enables temporal time-series modeling |
+| **City Name Standardization** | 80+ typos & variations | Unified `"CHICAGO"` | Typo corrections while preserving separate suburbs |
+| **Controlled Spatial Nulls** | 1,051 missing coords | 1,051 missing coords | Explicitly preserved & monitored via validation warnings |
+| **Validation Scorecard** | Unmonitored | **5 PASS \| 4 WARNING \| 0 FAIL** | Automated gate ensures zero regressions |
+
+---
+
 ## 🗂️ Project Structure
 
 ```text
@@ -98,36 +134,40 @@ chicago-food-inspections-data-quality-pipeline/
 │
 ├── README.md                 # Project documentation and pipeline guide
 ├── LICENSE                   # MIT Open Source License
-├── .gitignore                # Git ignore rules (raw data & venvs excluded)
+├── .gitignore                # Git ignore rules (raw data, logs & venvs excluded)
 ├── requirements.txt          # Python dependencies
 ├── Makefile                  # Automation commands
 ├── pytest.ini                # Pytest configuration
 ├── verify_setup.py           # Day 1 verification & ingestion script
 │
 ├── config/
-│   └── config.yaml           # Pipeline configuration and paths
+│   └── config.yaml           # Centralized pipeline configuration and paths
 │
 ├── data/
 │   ├── raw/                  # Immutable original dataset (git-ignored)
 │   ├── interim/              # Intermediate cleaned data (git-ignored)
-│   └── processed/            # Validated, analysis-ready clean datasets
+│   └── processed/            # Validated, analysis-ready clean datasets (git-ignored)
 │
 ├── src/                      # Modular production source code
 │   ├── __init__.py
+│   ├── ingestion.py          # Data ingestion and source retrieval module
 │   ├── profiling.py          # Automated baseline data profiling module
 │   ├── cleaning.py           # Core data cleaning & standardization engine
 │   ├── validation.py         # Automated data validation & integrity suite
-│   └── anomaly_detection.py  # Statistical outlier & anomaly profiling engine
+│   ├── anomaly_detection.py  # Statistical outlier & anomaly profiling engine
+│   └── pipeline.py           # Master end-to-end pipeline orchestrator
 │
-├── tests/                    # Automated test suite (19 passing unit tests)
+├── tests/                    # Automated test suite (23 passing unit tests)
 │   ├── test_profiling.py     # Unit tests for profiling module
 │   ├── test_cleaning.py      # Unit tests for cleaning transformations
 │   ├── test_validation.py    # Unit tests for validation rules
-│   └── test_anomaly_detection.py # Unit tests for anomaly & outlier methods
+│   ├── test_anomaly_detection.py # Unit tests for anomaly & outlier methods
+│   └── test_pipeline.py      # Unit tests for pipeline orchestrator & reports
 │
 ├── reports/
 │   ├── figures/              # Generated quality audit charts and summaries
 │   ├── data_quality_before.csv # Automated Day 2 baseline audit report
+│   ├── data_quality_after.csv  # Automated Day 5 post-cleaning audit report
 │   ├── validation_report.csv   # Automated Day 4 validation scorecard
 │   └── anomaly_report.csv      # Automated Day 4 anomaly registry
 │
@@ -161,20 +201,13 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4. Execute pipeline modules & test suite
+### 4. Execute master pipeline & test suite
 ```bash
-# 1. Run baseline profiling:
-python src/profiling.py
+# Execute master end-to-end data quality pipeline:
+python -m src.pipeline
 
-# 2. Execute core cleaning pipeline:
-python src/cleaning.py
-
-# 3. Run validation and anomaly detection:
-python src/validation.py
-python src/anomaly_detection.py
-
-# 4. Run full unit test suite (19 tests):
-pytest
+# Run full unit test suite (23 passing tests):
+python -m pytest
 ```
 
 ---
@@ -182,9 +215,10 @@ pytest
 ## 📅 7-Day Project Roadmap
 
 - [x] **Day 1: Project Setup, Architecture & Data Verification**
-- [x] **Day 2: Exploratory Data Analysis & Data Quality Profiling**
+- [x] **Day 2: Exploratory Data Analysis & Baseline Data Quality Profiling**
 - [x] **Day 3: Core Data Cleaning & Standardization Engine**
 - [x] **Day 4: Automated Data Validation & Anomaly Detection Layer**
-- [ ] **Day 5: Missing Data, Outliers & Anomaly Detection**
-- [ ] **Day 6: Automated Data Validation & Test Suite**
-- [ ] **Day 7: Pipeline Orchestration, Documentation & Portfolio Showcase**
+- [x] **Day 5: Master Pipeline Orchestration & End-to-End Automation**
+- [ ] **Day 6: Automated Testing & Continuous Integration (CI)**
+- [ ] **Day 7: Pipeline Packaging, Documentation & Portfolio Showcase**
+

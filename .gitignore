@@ -1,9 +1,10 @@
-﻿# Python bytecode & cache
+# Python bytecode & cache
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .pytest_cache/
+*.log
 
 # Virtual Environments
 .venv/
