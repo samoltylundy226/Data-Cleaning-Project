@@ -109,21 +109,40 @@ RAW DATA  ──►  INGESTION  ──►  PROFILING  ──►  CLEANING  ─�
 7. **Post-Cleaning Quality Reporting:** Generates [`reports/data_quality_after.csv`](reports/data_quality_after.csv) providing a comparative post-cleaning audit.
 8. **Structured Dual-Output Logging:** Records all pipeline events with millisecond timestamps to console and `pipeline.log`.
 
-### 2. Before vs. After Data Quality Audit
+---
 
-| Metric / Dimension | Raw Baseline (Day 2) | Processed & Cleaned (Day 5) | Net Impact / Improvement |
-| :--- | :--- | :--- | :--- |
-| **Total Rows** | 315,963 | 315,963 | **100% data retention (0 rows blindly deleted)** |
-| **Total Features** | 17 columns | 20 columns | +3 engineered features (`year`, `month`, `day_of_week`) |
-| **Primary Key Nulls / Dupes** | 0 / 0 | 0 / 0 | 100% unique surrogate ID (`inspection_id`) |
-| **Missing `aka_name`** | 2,424 (0.77%) | 0 (0.0%) | 100% resolved via fallback to legal `dba_name` |
-| **Missing `violations`** | 89,080 (28.19%) | 0 (0.0%) | Imputed with standard `"NO VIOLATIONS CITED"` |
-| **Missing `facility_type`** | 5,347 (1.69%) | 0 (0.0%) | Imputed with standard `"UNKNOWN"` |
-| **Facility Type Cardinality** | 527 messy categories | 293 consolidated categories | -234 redundant casing & spelling variants |
-| **Inspection Date Type** | `object` (string) | `datetime64[ns]` | 100% parsed; enables temporal time-series modeling |
-| **City Name Standardization** | 80+ typos & variations | Unified `"CHICAGO"` | Typo corrections while preserving separate suburbs |
-| **Controlled Spatial Nulls** | 1,051 missing coords | 1,051 missing coords | Explicitly preserved & monitored via validation warnings |
-| **Validation Scorecard** | Unmonitored | **5 PASS \| 4 WARNING \| 0 FAIL** | Automated gate ensures zero regressions |
+## 🧪 Automated Testing & Continuous Verification (Day 6)
+
+Reliability and reproducibility require test-driven data engineering. Day 6 implements a comprehensive, ultra-fast `pytest` test suite (**46 passing tests in < 1 second**) utilizing isolated, synthetic micro-datasets without unneeded dependencies on heavy raw data files.
+
+### 1. Test Suite Architecture
+
+| Test Module | Test Focus | Count | Key Test Assertions |
+| :--- | :--- | :---: | :--- |
+| [`tests/test_cleaning.py`](tests/test_cleaning.py) | Cleaning Engine | 9 | Missing value fallbacks (`aka_name` $\to$ `dba_name`, clean inspection text), whitespace stripping, duplicate key dropping, ZIP zero-padding, datetime conversion, facility classification. |
+| [`tests/test_validation.py`](tests/test_validation.py) | Data Validation & Gates | 23 | Schema conformance, primary key uniqueness and non-null enforcement, date window clamping, Chicago bounding box spatial rules, 5-digit ZIP structure, official results/risk categories. |
+| [`tests/test_anomalies.py`](tests/test_anomalies.py) | Anomaly Profiling | 7 | Haversine distance accuracy, IQR fence outlier thresholding, citation count spike detection, weekend inspection capture, whitespace address detection, anomaly registry generation. |
+| [`tests/test_pipeline.py`](tests/test_pipeline.py) | Master Orchestration | 5 | Configuration resolution, raw data availability checks, Windows-safe logger lifecycle, after-report generation, comparison report generation. |
+| [`tests/test_profiling.py`](tests/test_profiling.py) | Baseline Profiling | 2 | Dataset overview metrics, column-level profile generation and diagnostic rule checks. |
+
+### 2. Programmatic Before vs. After Data Quality Scorecard ([`reports/data_quality_comparison.csv`](reports/data_quality_comparison.csv))
+
+Generated programmatically via `src/quality_report.py` directly from `data/raw/food_inspections_raw.csv` and `data/processed/food_inspections_cleaned.csv` with zero hardcoded estimates:
+
+| Dimension | Metric | Raw Baseline (Before) | Cleaned Pipeline (After) | Net Impact | Real-World Domain Significance |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| **Dataset Volume** | Total Inspection Rows | 315,963 | 315,963 | **+0 (100% Retained)** | **Zero rows blindly deleted.** Every historic inspection record is preserved. |
+| **Schema Structure** | Feature Columns | 17 columns | 20 columns | **+3 columns** | 17 normalized snake_case features + 3 engineered temporal features (`year`, `month`, `day_of_week`). |
+| **Completeness** | Missing Data Cells | 100,409 (1.87%) | 3,199 (0.05%) | **-97,210 (-96.8%)** | Remaining nulls are strictly controlled domain nulls (1,051 missing coords, 42 unrecoverable ZIPs). |
+| **Integrity** | Duplicate Rows | 0 | 0 | 0 | Every inspection row represents a distinct administrative event. |
+| **Integrity** | Primary Key Duplicates | 0 | 0 | 0 | `inspection_id` verified as 100% unique, non-null surrogate primary key. |
+| **Data Validity** | Invalid Values Resolved | 316,049 | 0 | **-316,049 (-100%)** | Resolved unparsed string dates (315,963), non-standard Risk 'All' (83), and blank addresses (3). |
+| **Quality Gate** | Critical Validation Failures | 4 FAILURES | **0 FAILURES** | **-4 Failures (-100%)** | Pre-cleaning failed schema, dates, risk, and boundary checks; post-cleaning passes 100% of critical rules. |
+| **Temporal Validity** | Unparsed Datetime Strings | 315,963 (string) | 0 (datetime64[us]) | **-315,963 (-100%)** | 100% of inspection timestamps converted to native datetime objects for time-series modeling. |
+| **Missing Imputation** | Missing AKA Names | 2,424 missing | 0 missing | **-2,424 (-100%)** | Imputed missing trade names via legal DBA fallback without data loss. |
+| **Missing Imputation** | Clean Inspections Missing Citations | 89,080 nulls (28.2%) | 0 nulls (0.0%) | **-89,080 (-100%)** | Imputed with domain string `"NO VIOLATIONS CITED"` to clarify clean inspection outcomes. |
+| **Consistency** | Address Whitespace Padding | 246,705 records | 0 records | **-246,705 (-100%)** | Stripped leading/trailing whitespace and collapsed internal multi-spaces. |
+| **Cardinality** | Facility Type Categories | 527 raw categories | 293 clean categories | **-234 (-44.4%)** | Regex grouping consolidated casing and spelling variations while preserving granular categories. |
 
 ---
 
@@ -155,19 +174,21 @@ chicago-food-inspections-data-quality-pipeline/
 │   ├── cleaning.py           # Core data cleaning & standardization engine
 │   ├── validation.py         # Automated data validation & integrity suite
 │   ├── anomaly_detection.py  # Statistical outlier & anomaly profiling engine
+│   ├── quality_report.py     # Programmatic before vs after quality comparison engine
 │   └── pipeline.py           # Master end-to-end pipeline orchestrator
 │
-├── tests/                    # Automated test suite (23 passing unit tests)
-│   ├── test_profiling.py     # Unit tests for profiling module
-│   ├── test_cleaning.py      # Unit tests for cleaning transformations
-│   ├── test_validation.py    # Unit tests for validation rules
-│   ├── test_anomaly_detection.py # Unit tests for anomaly & outlier methods
-│   └── test_pipeline.py      # Unit tests for pipeline orchestrator & reports
+├── tests/                    # Automated test suite (46 passing unit tests)
+│   ├── test_cleaning.py      # Unit tests for cleaning transformations (9 tests)
+│   ├── test_validation.py    # Unit tests for validation rules (23 tests)
+│   ├── test_anomalies.py     # Unit tests for anomaly & outlier methods (7 tests)
+│   ├── test_pipeline.py      # Unit tests for pipeline orchestrator & reports (5 tests)
+│   └── test_profiling.py     # Unit tests for profiling module (2 tests)
 │
 ├── reports/
 │   ├── figures/              # Generated quality audit charts and summaries
 │   ├── data_quality_before.csv # Automated Day 2 baseline audit report
 │   ├── data_quality_after.csv  # Automated Day 5 post-cleaning audit report
+│   ├── data_quality_comparison.csv # Automated Day 6 before vs after scorecard
 │   ├── validation_report.csv   # Automated Day 4 validation scorecard
 │   └── anomaly_report.csv      # Automated Day 4 anomaly registry
 │
@@ -201,12 +222,15 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4. Execute master pipeline & test suite
+### 4. Execute master pipeline, reports & test suite
 ```bash
 # Execute master end-to-end data quality pipeline:
 python -m src.pipeline
 
-# Run full unit test suite (23 passing tests):
+# Generate programmatic before vs after comparison report:
+python -m src.quality_report
+
+# Run full unit test suite (46 passing tests in < 1 second):
 python -m pytest
 ```
 
@@ -219,6 +243,6 @@ python -m pytest
 - [x] **Day 3: Core Data Cleaning & Standardization Engine**
 - [x] **Day 4: Automated Data Validation & Anomaly Detection Layer**
 - [x] **Day 5: Master Pipeline Orchestration & End-to-End Automation**
-- [ ] **Day 6: Automated Testing & Continuous Integration (CI)**
+- [x] **Day 6: Automated Testing & Continuous Verification (pytest)**
 - [ ] **Day 7: Pipeline Packaging, Documentation & Portfolio Showcase**
 
