@@ -1,0 +1,13 @@
+dimension,metric_name,before_cleaning,after_cleaning,net_change,interpretation
+Dataset Volume,Rows Before vs After,"315,963","315,963",+0 (100% Retained),"Zero rows deleted; all 315,963 inspection records preserved."
+Schema Structure,Columns Standardized,17 raw columns,20 clean columns,+3,"17 raw columns normalized to snake_case; 3 temporal features added (year, month, day_of_week)."
+Completeness,Missing Values Before vs After,"100,409 (1.87%)","3,199 (0.05%)","-97,210 (-96.8%)","Remaining nulls are strictly controlled domain nulls (1,051 coords, 42 ZIPs, 1 type)."
+Integrity,Duplicate Rows Before vs After,0,0,0,Every inspection row represents a distinct administrative event.
+Integrity,Duplicate Primary Keys (inspection_id),0,0,0,inspection_id verified as 100% unique surrogate primary key.
+Data Validity,Invalid Values Before vs After,"316,049",0,"-316,049 (-100%)","Resolved unparsed string dates (315,963), non-standard Risk 'All' (83), and blank addresses (3)."
+Quality Gate,Validation Failures Before vs After,4 Critical FAILURES,"0 FAILURES (5 PASS, 4 WARN)",-4 Failures (-100%),"Pre-cleaning failed schema, date, risk, and boundary checks; post-cleaning passes 100% of critical rules."
+Temporal Validity,Unparsed Datetime Strings,"315,963 (string)",0 (datetime64[us]),"-315,963 (-100%)",100% of inspection timestamps converted to native datetime objects for time-series modeling.
+Missing Imputation,Missing AKA Names,"2,424 missing",0 missing,"-2,424 (-100%)",Imputed missing trade names via legal DBA fallback without data loss.
+Missing Imputation,Clean Inspections Missing Violation Text,"89,080 nulls (28.2%)",0 nulls (0.0%),"-89,080 (-100%)",Imputed with domain string 'NO VIOLATIONS CITED' to clarify clean inspection outcomes.
+Consistency,Address Whitespace Padding,"246,705 records",0 records,"-246,705 (-100%)",Stripped leading/trailing whitespace and collapsed internal multi-spaces.
+Cardinality,Facility Type Categories,527 raw categories,293 clean categories,-234 (-44.4%),Regex grouping consolidated casing and spelling variations while preserving granular categories.

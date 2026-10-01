@@ -1,4 +1,4 @@
-﻿"""
+"""
 Master Pipeline Orchestrator
 =============================
 Chicago Food Inspections Data Cleaning & Data Quality Pipeline
@@ -21,6 +21,7 @@ from src.profiling import get_dataset_overview, build_column_profile, export_bas
 from src.cleaning import clean_food_inspections
 from src.anomaly_detection import build_anomaly_registry, export_anomaly_report
 from src.validation import run_all_validations, export_validation_report
+from src.quality_report import generate_quality_comparison
 
 
 def setup_logger(log_file: str = "pipeline.log") -> logging.Logger:
@@ -164,7 +165,9 @@ def run_pipeline(config_path: str = "config/config.yaml") -> dict:
     # 8. Post-Cleaning Quality Report Generation
     logger.info("--- STAGE 7: QUALITY METRICS REPORTING ---")
     after_df = generate_after_report(cleaned_df, "reports/data_quality_after.csv")
+    comp_df = generate_quality_comparison(raw_df, cleaned_df, "reports/data_quality_comparison.csv")
     logger.info("Generated post-cleaning data quality report: reports/data_quality_after.csv")
+    logger.info("Generated before vs after quality comparison: reports/data_quality_comparison.csv")
 
     duration = time.time() - start_time
     logger.info(f"Pipeline executed in {duration:.2f} seconds.")
@@ -184,9 +187,10 @@ def run_pipeline(config_path: str = "config/config.yaml") -> dict:
     print(f"  2. Interim Data:         {interim_path} ({interim_size:.2f} MB)")
     print(f"  3. Baseline Report:      reports/data_quality_before.csv")
     print(f"  4. Post-Cleaning Report: reports/data_quality_after.csv")
-    print(f"  5. Validation Scorecard: reports/validation_report.csv")
-    print(f"  6. Anomaly Registry:     reports/anomaly_report.csv")
-    print(f"  7. Execution Log:        pipeline.log")
+    print(f"  5. Quality Comparison:   reports/data_quality_comparison.csv")
+    print(f"  6. Validation Scorecard: reports/validation_report.csv")
+    print(f"  7. Anomaly Registry:     reports/anomaly_report.csv")
+    print(f"  8. Execution Log:        pipeline.log")
     print("=" * 80)
 
     return {
