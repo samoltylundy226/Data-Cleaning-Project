@@ -1,15 +1,22 @@
-﻿.PHONY: help install download verify test clean
+.PHONY: help install verify pipeline report test clean
 
 help:
 	@echo "Available commands:"
 	@echo "  make install       - Install required Python dependencies"
-	@echo "  make download      - Download raw Chicago Food Inspections dataset"
-	@echo "  make verify        - Verify dataset loading with Python"
+	@echo "  make pipeline      - Run end-to-end data quality pipeline"
+	@echo "  make report        - Generate before vs after quality comparison report"
 	@echo "  make test          - Run pytest test suite"
+	@echo "  make verify        - Verify environment setup and raw data"
 	@echo "  make clean         - Clean temporary cache files"
 
 install:
 	pip install -r requirements.txt
+
+pipeline:
+	python -m src.pipeline
+
+report:
+	python -m src.quality_report
 
 verify:
 	python verify_setup.py
